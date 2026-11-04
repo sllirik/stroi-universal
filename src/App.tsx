@@ -72,7 +72,7 @@ function Header() {
 }
 
 function ProductCard({ product }: { product: Product }) {
-  const { items, add } = useCart()
+  const { items, add, setQuantity } = useCart()
   const quantityInCart = items.find(item => item.productId === product.id)?.quantity ?? 0
   return <article className="product-card">
     <Link to={`/product/${product.id}`} className="product-card-link">
