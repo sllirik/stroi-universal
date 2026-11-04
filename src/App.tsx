@@ -72,13 +72,17 @@ function Header() {
 }
 
 function ProductCard({ product }: { product: Product }) {
-  const { add } = useCart()
+  const { items, add } = useCart()
+  const quantityInCart = items.find(item => item.productId === product.id)?.quantity ?? 0
   return <article className="product-card">
     <Link to={`/product/${product.id}`} className="product-card-link">
-      <div className="product-image"><img src={product.image} alt={product.name}/><span className="image-arrow"><ArrowRight size={18}/></span></div>
+      <div className="product-image"><img src={product.image} alt={product.name}/><span className="image-arrow"><ArrowRight size={18}/></span>{quantityInCart > 0 && <span className="card-cart-count"><ShoppingBag size={13}/> В корзине: {quantityInCart}</span>}</div>
       <div className="product-info"><span className="product-category">{categories.find(c => c.id === product.category)?.name ?? 'Товары'}</span><h3>{product.name}</h3><strong>{rub(product.price)}</strong></div>
     </Link>
-    <button className="add-cart-button" onClick={() => add(product.id)}><ShoppingBag size={16}/> В корзину</button>
+    <div className="card-cart-actions">
+      <button className="add-cart-button" onClick={() => add(product.id)}><ShoppingBag size={16}/> {quantityInCart > 0 ? 'Добавить ещё' : 'В корзину'}</button>
+      {quantityInCart > 0 && <Link className="go-cart-button" to="/cart">Перейти в корзину <ArrowRight size={14}/></Link>}
+    </div>
   </article>
 }
 
