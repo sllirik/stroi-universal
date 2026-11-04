@@ -6,9 +6,30 @@
     <meta name="theme-color" content="#f36b21" />
     <meta name="description" content="СтройуниВЕРсал — строительные и отделочные материалы, товары для дома и ремонта." />
     <title>СтройуниВЕРсал — товары для строительства и ремонта</title>
+    <style>
+      #boot-status { margin: 24px auto; max-width: 560px; padding: 18px; font: 16px/1.5 system-ui, sans-serif; color: #252525; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; }
+      #boot-status strong { display: block; margin-bottom: 6px; }
+    </style>
+    <script>
+      window.addEventListener('error', function (event) {
+        var box = document.getElementById('boot-status');
+        if (!box) return;
+        box.hidden = false;
+        box.innerHTML = '<strong>Не удалось запустить страницу</strong><span></span>';
+        box.querySelector('span').textContent = event.message || 'Ошибка загрузки JavaScript-файла.';
+      });
+      window.addEventListener('unhandledrejection', function (event) {
+        var box = document.getElementById('boot-status');
+        if (!box) return;
+        box.hidden = false;
+        box.innerHTML = '<strong>Ошибка при запуске магазина</strong><span></span>';
+        box.querySelector('span').textContent = String(event.reason || 'Неизвестная ошибка');
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <div id="boot-status"><strong>Загружаем СтройуниВЕРсал…</strong>Если это сообщение не исчезает, приложение не смогло запуститься.</div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
