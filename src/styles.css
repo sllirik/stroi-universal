@@ -91,3 +91,10 @@
 .go-cart-button:hover{background:#fff0e7;border-color:var(--orange)}
 @media(max-width:800px){.card-cart-actions{padding:0 10px 12px;gap:6px}.card-cart-actions .add-cart-button{font-size:10px}.card-cart-count{left:8px;top:8px;padding:6px 8px;font-size:9px}}
 @media(max-width:420px){.card-cart-count{font-size:8px;padding:5px 6px}.go-cart-button{font-size:9px}}
+
+
+/* Quantity stepper on product cards */
+.card-quantity-control{height:39px;width:100%;display:flex;align-items:center;justify-content:space-between;border:1px solid #e7e9e8;background:#fff}
+.card-quantity-control button{height:37px;width:44px;border:0;background:#f7f8f7;color:#59646a;display:grid;place-items:center;cursor:pointer;transition:.2s}
+.card-quantity-control button:hover{background:#fff0e7;color:var(--orange)}
+.card-quantity-control b{font-size:13px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
