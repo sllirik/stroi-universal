@@ -26,7 +26,7 @@ app.use(express.json({ limit: '100kb' }))
 app.get('/api/health', async (_request, response) => {
   let database: 'connected' | 'unavailable' = 'unavailable'
   try {
-    await prisma.$queryRaw\`SELECT 1\`
+    await prisma.$queryRawUnsafe('SELECT 1')
     database = 'connected'
   } catch {
     // Health endpoint remains available so hosting checks can distinguish
