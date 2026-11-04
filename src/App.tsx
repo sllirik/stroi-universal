@@ -1,14 +1,48 @@
-import { FormEvent, useMemo, useState } from 'react'
+import { createContext, FormEvent, useContext, useEffect, useMemo, useState } from 'react'
 import { Link, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Search, ShoppingBag, Menu, X, ChevronRight, Truck, ShieldCheck, Headphones, SlidersHorizontal } from 'lucide-react'
+import { ArrowRight, Search, ShoppingBag, Menu, X, ChevronRight, Truck, ShieldCheck, Headphones, SlidersHorizontal, Plus, Minus, Trash2 } from 'lucide-react'
 import { categories, products } from './data/products'
 import type { Product } from './data/products'
 
 const rub = (value: number) => new Intl.NumberFormat('ru-RU').format(value) + ' ₽'
 
+type CartItem = { productId: string; quantity: number }
+type CartContextValue = {
+  items: CartItem[]
+  add: (productId: string) => void
+  setQuantity: (productId: string, quantity: number) => void
+  remove: (productId: string) => void
+  clear: () => void
+}
+const CartContext = createContext<CartContextValue | null>(null)
+function useCart() {
+  const value = useContext(CartContext)
+  if (!value) throw new Error('useCart должен использоваться внутри CartProvider')
+  return value
+}
+function CartProvider({ children }: { children: React.ReactNode }) {
+  const [items, setItems] = useState<CartItem[]>(() => {
+    try {
+      const stored = localStorage.getItem('stroi-universal-cart')
+      return stored ? JSON.parse(stored) as CartItem[] : []
+    } catch { return [] }
+  })
+  useEffect(() => { localStorage.setItem('stroi-universal-cart', JSON.stringify(items)) }, [items])
+  const add = (productId: string) => setItems(current => {
+    const found = current.find(item => item.productId === productId)
+    return found ? current.map(item => item.productId === productId ? { ...item, quantity: item.quantity + 1 } : item) : [...current, { productId, quantity: 1 }]
+  })
+  const setQuantity = (productId: string, quantity: number) => setItems(current => quantity < 1 ? current.filter(item => item.productId !== productId) : current.map(item => item.productId === productId ? { ...item, quantity: Math.min(99, quantity) } : item))
+  const remove = (productId: string) => setItems(current => current.filter(item => item.productId !== productId))
+  const clear = () => setItems([])
+  return <CartContext.Provider value={{ items, add, setQuantity, remove, clear }}>{children}</CartContext.Provider>
+}
+
 function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const { items } = useCart()
+  const cartCount = items.reduce((sum, item) => sum + item.quantity, 0)
   const navigate = useNavigate()
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
@@ -32,16 +66,20 @@ function Header() {
         <a className="contact-link" href="tel:+70000000000">Связаться с нами<small>Уточнить наличие и доставку</small></a>
         <button className="icon-button menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label="Открыть меню">{menuOpen ? <X/> : <Menu/>}</button>
       </div>
-      <nav className={`nav-wrap ${menuOpen ? 'nav-open' : ''}`}><div className="container nav-inner"><Link to="/">Главная</Link><Link to="/catalog">Каталог</Link><a href="/#advantages">О магазине</a><a href="/#contacts">Контакты</a><span className="nav-spacer"/><span className="nav-note"><ShoppingBag size={17}/> Каталог товаров</span></div></nav>
+      <nav className={`nav-wrap ${menuOpen ? 'nav-open' : ''}`}><div className="container nav-inner"><Link to="/">Главная</Link><Link to="/catalog">Каталог</Link><Link to="/cart">Корзина</Link><a href="/#advantages">О магазине</a><a href="/#contacts">Контакты</a><span className="nav-spacer"/><Link className="nav-cart" to="/cart"><ShoppingBag size={17}/> Корзина <b>{cartCount}</b></Link></div></nav>
     </header>
   )
 }
 
 function ProductCard({ product }: { product: Product }) {
-  return <Link to={`/product/${product.id}`} className="product-card">
-    <div className="product-image"><img src={product.image} alt={product.name}/><span className="image-arrow"><ArrowRight size={18}/></span></div>
-    <div className="product-info"><span className="product-category">{categories.find(c => c.id === product.category)?.name ?? 'Товары'}</span><h3>{product.name}</h3><strong>{rub(product.price)}</strong></div>
-  </Link>
+  const { add } = useCart()
+  return <article className="product-card">
+    <Link to={`/product/${product.id}`} className="product-card-link">
+      <div className="product-image"><img src={product.image} alt={product.name}/><span className="image-arrow"><ArrowRight size={18}/></span></div>
+      <div className="product-info"><span className="product-category">{categories.find(c => c.id === product.category)?.name ?? 'Товары'}</span><h3>{product.name}</h3><strong>{rub(product.price)}</strong></div>
+    </Link>
+    <button className="add-cart-button" onClick={() => add(product.id)}><ShoppingBag size={16}/> В корзину</button>
+  </article>
 }
 
 function Home() {
@@ -99,13 +137,36 @@ function ProductPage() {
   const { id } = useParams()
   const product = products.find(p => p.id === id)
   if (!product) return <main className="container not-found"><h1>Товар не найден</h1><Link to="/catalog">Вернуться в каталог</Link></main>
-  return <main className="container product-detail"><div className="breadcrumbs"><Link to="/">Главная</Link><ChevronRight size={14}/><Link to="/catalog">Каталог</Link><ChevronRight size={14}/><span>{product.name}</span></div><div className="detail-grid"><div className="detail-image"><img src={product.image} alt={product.name}/></div><div className="detail-copy"><span className="eyebrow">КАРТОЧКА ТОВАРА</span><h1>{product.name}</h1><div className="detail-price">{rub(product.price)}</div><p>{product.description}</p><div className="detail-actions"><a className="primary-button" href="tel:+70000000000">Уточнить наличие <ArrowRight size={18}/></a><span>Цена и наличие требуют подтверждения продавца</span></div></div></div><section className="spec-section"><h2>Характеристики</h2><div className="spec-list">{product.specs.map(s => <div key={s.label}><span>{s.label}</span><b>{s.value}</b></div>)}</div></section></main>
+  const { add } = useCart()
+  return <main className="container product-detail"><div className="breadcrumbs"><Link to="/">Главная</Link><ChevronRight size={14}/><Link to="/catalog">Каталог</Link><ChevronRight size={14}/><span>{product.name}</span></div><div className="detail-grid"><div className="detail-image"><img src={product.image} alt={product.name}/></div><div className="detail-copy"><span className="eyebrow">КАРТОЧКА ТОВАРА</span><h1>{product.name}</h1><div className="detail-price">{rub(product.price)}</div><p>{product.description}</p><div className="detail-actions"><button className="primary-button" onClick={() => add(product.id)}><ShoppingBag size={17}/> Добавить в корзину</button><span>Цена и наличие требуют подтверждения продавца</span></div></div></div><section className="spec-section"><h2>Характеристики</h2><div className="spec-list">{product.specs.map(s => <div key={s.label}><span>{s.label}</span><b>{s.value}</b></div>)}</div></section></main>
+}
+
+
+function CartPage() {
+  const { items, setQuantity, remove, clear } = useCart()
+  const cartProducts = items.map(item => ({ ...item, product: products.find(p => p.id === item.productId) })).filter(item => item.product)
+  const total = cartProducts.reduce((sum, item) => sum + item.product!.price * item.quantity, 0)
+  const count = cartProducts.reduce((sum, item) => sum + item.quantity, 0)
+  if (!cartProducts.length) return <main className="container cart-page"><div className="breadcrumbs"><Link to="/">Главная</Link><ChevronRight size={14}/><span>Корзина</span></div><div className="cart-empty"><ShoppingBag size={42}/><h1>Корзина пока пуста</h1><p>Добавьте товары из каталога — они появятся здесь.</p><Link className="primary-button" to="/catalog">Перейти в каталог <ArrowRight size={17}/></Link></div></main>
+  return <main className="container cart-page">
+    <div className="breadcrumbs"><Link to="/">Главная</Link><ChevronRight size={14}/><span>Корзина</span></div>
+    <div className="cart-heading"><div><span className="eyebrow">ВАШИ ПОКУПКИ</span><h1>Корзина</h1></div><button className="clear-cart" onClick={clear}>Очистить корзину</button></div>
+    <div className="cart-layout"><section className="cart-items">{cartProducts.map(({product, quantity}) => <article className="cart-item" key={product!.id}>
+      <Link to={`/product/${product!.id}`} className="cart-item-image"><img src={product!.image} alt={product!.name}/></Link>
+      <div className="cart-item-info"><Link to={`/product/${product!.id}`}><b>{product!.name}</b></Link><span>{rub(product!.price)} / шт.</span><div className="quantity-control"><button aria-label="Уменьшить количество" onClick={() => setQuantity(product!.id, quantity - 1)}><Minus size={14}/></button><b>{quantity}</b><button aria-label="Увеличить количество" onClick={() => setQuantity(product!.id, quantity + 1)}><Plus size={14}/></button></div></div>
+      <div className="cart-item-total"><b>{rub(product!.price * quantity)}</b><button aria-label="Удалить товар" onClick={() => remove(product!.id)}><Trash2 size={17}/></button></div>
+    </article>)}</section>
+    <aside className="cart-summary"><h2>Ваш заказ</h2><div><span>Товары ({count})</span><b>{rub(total)}</b></div><div className="cart-total"><span>Итого</span><strong>{rub(total)}</strong></div><button className="primary-button checkout-placeholder" onClick={() => alert('Оформление заказа подключим после настройки сервера и подтверждения условий доставки.')}>Перейти к оформлению <ArrowRight size={17}/></button><p>Пока это предварительный расчёт. Наличие, доставка и итоговая стоимость подтверждаются продавцом.</p><Link to="/catalog" className="continue-shopping">Продолжить покупки</Link></aside></div>
+  </main>
 }
 
 function Footer() {
   return <footer className="footer" id="contacts"><div className="container footer-grid"><div><Link to="/" className="brand footer-brand"><span className="brand-mark"><span className="brand-tree">✳</span><span className="brand-house">⌂</span></span><span className="brand-name">стройуни<span>ВЕР</span>сал</span></Link><p>Строительные и отделочные материалы, товары для дома и ремонта.</p></div><div><b>Покупателям</b><Link to="/catalog">Каталог</Link><a href="/#advantages">О магазине</a></div><div><b>Контакты</b><span>Телефон уточняется</span><span>Режим работы уточняется</span><small>Реквизиты ИП будут добавлены перед запуском</small></div></div><div className="container copyright">© {new Date().getFullYear()} СтройуниВЕРсал. Информация о товарах уточняется.</div></footer>
 }
 
+function Storefront() {
+  return <><Header/><Routes><Route path="/" element={<Home/>}/><Route path="/catalog" element={<CatalogPage/>}/><Route path="/cart" element={<CartPage/>}/><Route path="/product/:id" element={<ProductPage/>}/><Route path="*" element={<main className="container not-found"><h1>Страница не найдена</h1><Link to="/">На главную</Link></main>}/></Routes><Footer/></>
+}
 export default function App() {
-  return <><Header/><Routes><Route path="/" element={<Home/>}/><Route path="/catalog" element={<CatalogPage/>}/><Route path="/product/:id" element={<ProductPage/>}/><Route path="*" element={<main className="container not-found"><h1>Страница не найдена</h1><Link to="/">На главную</Link></main>}/></Routes><Footer/></>
+  return <CartProvider><Storefront/></CartProvider>
 }
