@@ -154,6 +154,7 @@ function ProductPage() {
 
 function CartPage() {
   const { items, setQuantity, remove, clear } = useCart()
+  const navigate = useNavigate()
   const cartProducts = items.map(item => ({ ...item, product: products.find(p => p.id === item.productId) })).filter(item => item.product)
   const total = cartProducts.reduce((sum, item) => sum + item.product!.price * item.quantity, 0)
   const count = cartProducts.reduce((sum, item) => sum + item.quantity, 0)
@@ -166,7 +167,55 @@ function CartPage() {
       <div className="cart-item-info"><Link to={`/product/${product!.id}`}><b>{product!.name}</b></Link><span>{rub(product!.price)} / шт.</span><div className="quantity-control"><button aria-label="Уменьшить количество" onClick={() => setQuantity(product!.id, quantity - 1)}><Minus size={14}/></button><b>{quantity}</b><button aria-label="Увеличить количество" onClick={() => setQuantity(product!.id, quantity + 1)}><Plus size={14}/></button></div></div>
       <div className="cart-item-total"><b>{rub(product!.price * quantity)}</b><button aria-label="Удалить товар" onClick={() => remove(product!.id)}><Trash2 size={17}/></button></div>
     </article>)}</section>
-    <aside className="cart-summary"><h2>Ваш заказ</h2><div><span>Товары ({count})</span><b>{rub(total)}</b></div><div className="cart-total"><span>Итого</span><strong>{rub(total)}</strong></div><button className="primary-button checkout-placeholder" onClick={() => alert('Оформление заказа подключим после настройки сервера и подтверждения условий доставки.')}>Перейти к оформлению <ArrowRight size={17}/></button><p>Пока это предварительный расчёт. Наличие, доставка и итоговая стоимость подтверждаются продавцом.</p><Link to="/catalog" className="continue-shopping">Продолжить покупки</Link></aside></div>
+    <aside className="cart-summary"><h2>Ваш заказ</h2><div><span>Товары ({count})</span><b>{rub(total)}</b></div><div className="cart-total"><span>Итого</span><strong>{rub(total)}</strong></div><button className="primary-button checkout-placeholder" onClick={() => navigate('/checkout')}>Перейти к оформлению <ArrowRight size={17}/></button><p>Пока это предварительный расчёт. Наличие, доставка и итоговая стоимость подтверждаются продавцом.</p><Link to="/catalog" className="continue-shopping">Продолжить покупки</Link></aside></div>
+  </main>
+}
+
+
+function CheckoutPage() {
+  const { items } = useCart()
+  const [delivery, setDelivery] = useState<'pickup' | 'delivery'>('pickup')
+  const cartProducts = items.map(item => ({ ...item, product: products.find(p => p.id === item.productId) })).filter(item => item.product)
+  const total = cartProducts.reduce((sum, item) => sum + item.product!.price * item.quantity, 0)
+  const count = cartProducts.reduce((sum, item) => sum + item.quantity, 0)
+
+  if (!cartProducts.length) return <main className="container checkout-page"><div className="breadcrumbs"><Link to="/">Главная</Link><ChevronRight size={14}/><Link to="/cart">Корзина</Link><ChevronRight size={14}/><span>Оформление</span></div><div className="cart-empty"><ShoppingBag size={42}/><h1>Сначала добавьте товары</h1><p>В корзине пока нет товаров для оформления.</p><Link className="primary-button" to="/catalog">Перейти в каталог <ArrowRight size={17}/></Link></div></main>
+
+  return <main className="container checkout-page">
+    <div className="breadcrumbs"><Link to="/">Главная</Link><ChevronRight size={14}/><Link to="/cart">Корзина</Link><ChevronRight size={14}/><span>Оформление заказа</span></div>
+    <div className="checkout-heading"><span className="eyebrow">ПОСЛЕДНИЙ ШАГ ПЕРЕД ЗАКАЗОМ</span><h1>Оформление заказа</h1><p>Укажите контактные данные и предпочтительный способ получения</p></div>
+    <div className="checkout-layout">
+      <section className="checkout-form-panel">
+        <div className="checkout-section">
+          <h2><span>1</span> Контактные данные</h2>
+          <div className="checkout-fields">
+            <label>Ваше имя<input type="text" autoComplete="name" placeholder="Как к вам обращаться" disabled /></label>
+            <label>Телефон<input type="tel" autoComplete="tel" placeholder="+7 (___) ___-__-__" disabled /></label>
+            <label className="checkout-full">Электронная почта <small>Необязательно</small><input type="email" autoComplete="email" placeholder="name@example.ru" disabled /></label>
+          </div>
+        </div>
+        <div className="checkout-section">
+          <h2><span>2</span> Получение заказа</h2>
+          <div className="delivery-options">
+            <button type="button" className={delivery === 'pickup' ? 'delivery-option selected' : 'delivery-option'} onClick={() => setDelivery('pickup')}><b>Самовывоз</b><small>Адрес и время согласуем с продавцом</small></button>
+            <button type="button" className={delivery === 'delivery' ? 'delivery-option selected' : 'delivery-option'} onClick={() => setDelivery('delivery')}><b>Доставка</b><small>Стоимость и сроки уточняются</small></button>
+          </div>
+          {delivery === 'delivery' && <label className="checkout-address">Адрес доставки<input type="text" placeholder="Город, улица, дом, квартира" disabled /></label>}
+        </div>
+        <div className="checkout-section">
+          <h2><span>3</span> Комментарий к заказу</h2>
+          <textarea placeholder="Например, удобное время для звонка" rows={3} disabled />
+        </div>
+        <div className="checkout-notice"><b>Оформление пока не подключено</b><p>Это предварительный экран. Данные не отправляются и не сохраняются. После настройки сервера добавим отправку заказа, подтверждение наличия и безопасную оплату.</p></div>
+      </section>
+      <aside className="checkout-summary">
+        <h2>Ваш заказ</h2>
+        {cartProducts.map(({product, quantity}) => <div className="checkout-summary-item" key={product!.id}><span>{product!.name} × {quantity}</span><b>{rub(product!.price * quantity)}</b></div>)}
+        <div className="checkout-summary-total"><span>Товаров: {count}</span><strong>{rub(total)}</strong></div>
+        <button className="primary-button checkout-submit" disabled>Заказать — скоро будет доступно</button>
+        <Link to="/cart" className="continue-shopping">Вернуться в корзину</Link>
+      </aside>
+    </div>
   </main>
 }
 
@@ -175,7 +224,7 @@ function Footer() {
 }
 
 function Storefront() {
-  return <><Header/><Routes><Route path="/" element={<Home/>}/><Route path="/catalog" element={<CatalogPage/>}/><Route path="/cart" element={<CartPage/>}/><Route path="/product/:id" element={<ProductPage/>}/><Route path="*" element={<main className="container not-found"><h1>Страница не найдена</h1><Link to="/">На главную</Link></main>}/></Routes><Footer/></>
+  return <><Header/><Routes><Route path="/" element={<Home/>}/><Route path="/catalog" element={<CatalogPage/>}/><Route path="/cart" element={<CartPage/>}/><Route path="/checkout" element={<CheckoutPage/>}/><Route path="/product/:id" element={<ProductPage/>}/><Route path="*" element={<main className="container not-found"><h1>Страница не найдена</h1><Link to="/">На главную</Link></main>}/></Routes><Footer/></>
 }
 export default function App() {
   return <CartProvider><Storefront/></CartProvider>
