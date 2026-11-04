@@ -80,7 +80,13 @@ function ProductCard({ product }: { product: Product }) {
       <div className="product-info"><span className="product-category">{categories.find(c => c.id === product.category)?.name ?? 'Товары'}</span><h3>{product.name}</h3><strong>{rub(product.price)}</strong></div>
     </Link>
     <div className="card-cart-actions">
-      <button className="add-cart-button" onClick={() => add(product.id)}><ShoppingBag size={16}/> {quantityInCart > 0 ? 'Добавить ещё' : 'В корзину'}</button>
+      {quantityInCart === 0
+        ? <button className="add-cart-button" onClick={() => add(product.id)}><ShoppingBag size={16}/> В корзину</button>
+        : <div className="card-quantity-control" aria-label={`Количество в корзине: ${quantityInCart}`}>
+            <button aria-label="Уменьшить количество" onClick={() => setQuantity(product.id, quantityInCart - 1)}><Minus size={15}/></button>
+            <b>{quantityInCart}</b>
+            <button aria-label="Увеличить количество" onClick={() => add(product.id)}><Plus size={15}/></button>
+          </div>}
       {quantityInCart > 0 && <Link className="go-cart-button" to="/cart">Перейти в корзину <ArrowRight size={14}/></Link>}
     </div>
   </article>
